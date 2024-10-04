@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering.Universal.Internal;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Whisper;
 
@@ -12,6 +13,7 @@ public class Transcribe : MonoBehaviour
 {
     public Dropdown audiosDD;
     public Button transcribeBtn;
+    public Button forceStopBtn;
     public Text sampleText;
     public Text subtitleText;
     public Text transcribedText;
@@ -57,6 +59,13 @@ public class Transcribe : MonoBehaviour
         });
 
         playingIcon.gameObject.SetActive(false);
+
+        forceStopBtn.onClick.AddListener(ForceStop);
+    }
+
+    private void ForceStop()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     private async void Transcribing(AudioClip[] clips, string sample)
