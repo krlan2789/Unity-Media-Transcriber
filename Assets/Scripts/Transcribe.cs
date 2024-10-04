@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Rendering.Universal.Internal;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Whisper;
@@ -164,7 +165,7 @@ public class Transcribe : MonoBehaviour
         return "" + sb.ToString();
     }
 
-    private static string TokenToRichText(WhisperTokenData token)
+    private string TokenToRichText(WhisperTokenData token)
     {
         if (token.IsSpecial)
             return "";
@@ -175,7 +176,7 @@ public class Transcribe : MonoBehaviour
         return "" + richText;
     }
 
-    private static string ProbabilityToColor(float p)
+    private string ProbabilityToColor(float p)
     {
         if (p <= 0.33f)
             return "red";
@@ -185,7 +186,7 @@ public class Transcribe : MonoBehaviour
             return "green";
     }
 
-    private static string ResultToRichText(WhisperResult result)
+    private string ResultToRichText(WhisperResult result)
     {
         var sb = new StringBuilder();
         foreach (var seg in result.Segments)
