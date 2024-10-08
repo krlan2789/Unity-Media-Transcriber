@@ -2,15 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Whisper;
-using static UnityEditor.Progress;
 
 public class Transcribe : MonoBehaviour
 {
