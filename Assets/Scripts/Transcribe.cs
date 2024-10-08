@@ -129,6 +129,7 @@ public class Transcribe : MonoBehaviour
         sampleText.text = sample;
 
         transcribeBtn.interactable = false;
+        contentListDD.interactable = false;
         audiosDD.interactable = false;
 
         var sw = new Stopwatch();
@@ -145,6 +146,7 @@ public class Transcribe : MonoBehaviour
 
         transcribeBtn.GetComponentInChildren<Text>().text = "Transcribe & Play";
         transcribeBtn.interactable = true;
+        contentListDD.interactable = true;
         audiosDD.interactable = true;
     }
 
