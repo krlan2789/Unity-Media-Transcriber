@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -9,9 +10,18 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Whisper;
+using static UnityEditor.Progress;
 
 public class Transcribe : MonoBehaviour
 {
+    [Serializable]
+    public struct DataContent
+    {
+        public TextAsset sampleContent;
+        public AudioClip[] clips;
+    }
+
+    public Dropdown contentListDD;
     public Dropdown audiosDD;
     public Button transcribeBtn;
     public Button forceStopBtn;
@@ -22,9 +32,9 @@ public class Transcribe : MonoBehaviour
     public Image playingIcon;
 
     public WhisperManager whisper;
-    public AudioClip[] clips;
-    public TextAsset sampleContent;
+    public DataContent[] contents;
 
+    private AudioClip[] clips;
     private List<string> sampleLines = new List<string>();
 
     private async void Awake()
@@ -36,16 +46,48 @@ public class Transcribe : MonoBehaviour
 
     private void Start()
     {
-        //  List of audio files selection
-        audiosDD.ClearOptions();
-        List<string> options = new List<string> { "All Audio" };
-        foreach (var clip in clips) options.Add("Audio " + clip.name + ".ogg");
-        audiosDD.AddOptions(options);
+        // List of content text files
+        contentListDD.ClearOptions();
+        List<string> options = new List<string>();
+        foreach (var datum in contents)
+        {
+            options.Add(datum.sampleContent.name);
+        }
+        contentListDD.AddOptions(options);
+        contentListDD.onValueChanged.AddListener(OnContentListChanged);
 
-        //  List of sample text
-        sampleLines.Clear();
-        sampleLines.Add(sampleContent.text);
-        foreach (var line in sampleContent.text.Split("\n")) sampleLines.Add(line);
+        OnContentListChanged(0);
+
+        playingIcon.gameObject.SetActive(false);
+
+        forceStopBtn.onClick.AddListener(ForceStop);
+    }
+
+    private void OnContentListChanged(int index)
+    {
+        TextAsset sampleContent = contents[index].sampleContent;
+        string contentText = ParseClcContent(sampleContent.text);
+        clips = contents[index].clips;
+
+        if (clips.Length > 0)
+        {
+            //  List of audio files selection
+            audiosDD.ClearOptions();
+            var options = new List<string>();
+
+            if (clips.Length > 1)
+                options.Add("All Audio");
+            //else
+            //    options.Add("Audio " + clips[0].name + ".ogg");
+
+            foreach (var clip in clips) options.Add("Audio " + clip.name + ".ogg");
+            audiosDD.AddOptions(options);
+
+            //  List of sample text
+            sampleLines.Clear();
+            sampleLines.Add(contentText);
+            if (clips.Length > 1) foreach (var line in contentText.Split("\n")) sampleLines.Add(line);
+        }
 
         transcribeBtn.GetComponentInChildren<Text>().text = "Transcribe & Play";
         transcribeBtn.onClick.AddListener(() =>
@@ -58,10 +100,23 @@ public class Transcribe : MonoBehaviour
 
             Transcribing(selectedClips, sampleLines[audiosDD.value]);
         });
+    }
 
-        playingIcon.gameObject.SetActive(false);
+    private string ParseClcContent(string content)
+    {
+        content = content.Replace("< ", "").Replace(" >", "").Replace("#", "");
+        var parsed = new List<string>();
+        foreach(string ch in content.Split(" "))
+        {
+            string selectedChar = "";
+            
+            if (ch.Length > 1) selectedChar = ch.Split("(")[0];
+            else selectedChar = ch;
 
-        forceStopBtn.onClick.AddListener(ForceStop);
+            parsed.Add(selectedChar);
+        }
+
+        return string.Join("", parsed.ToArray());
     }
 
     private void ForceStop()
