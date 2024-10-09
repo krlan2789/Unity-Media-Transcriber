@@ -21,6 +21,7 @@ public class Transcribe : MonoBehaviour
     public Dropdown contentListDD;
     public Dropdown audiosDD;
     public Button transcribeBtn;
+    public Button playPauseBtn;
     public Button forceStopBtn;
     public Text sampleText;
     public Text subtitleText;
@@ -31,11 +32,15 @@ public class Transcribe : MonoBehaviour
     public WhisperManager whisper;
     public DataContent[] contents;
 
+    private AudioSource audioSource;
     private AudioClip[] clips;
     private List<string> sampleLines = new List<string>();
 
     private async void Awake()
     {
+        audioSource = FindObjectOfType<AudioSource>();
+        if (audioSource == null) audioSource = new GameObject("Audio Echo").AddComponent<AudioSource>();
+
         whisper.enableTokens = true;
         whisper.tokensTimestamps = true;
         await whisper.InitModel();
@@ -56,8 +61,8 @@ public class Transcribe : MonoBehaviour
         OnContentListChanged(0);
 
         playingIcon.gameObject.SetActive(false);
-
         forceStopBtn.onClick.AddListener(ForceStop);
+        playPauseBtn.onClick.AddListener(PlayPause);
     }
 
     private void OnContentListChanged(int index)
@@ -86,7 +91,8 @@ public class Transcribe : MonoBehaviour
             if (clips.Length > 1) foreach (var line in contentText.Split("\n")) sampleLines.Add(line);
         }
 
-        transcribeBtn.GetComponentInChildren<Text>().text = "Transcribe & Play";
+        transcribeBtn.GetComponentInChildren<Text>().text = "Transcribe";
+        transcribeBtn.onClick.RemoveAllListeners();
         transcribeBtn.onClick.AddListener(() =>
         {
             AudioClip[] selectedClips = null;
@@ -144,7 +150,7 @@ public class Transcribe : MonoBehaviour
         sw.Stop();
         timeText.text = $"{((float)time / 1000):0.000} seconds (Total)";
 
-        transcribeBtn.GetComponentInChildren<Text>().text = "Transcribe & Play";
+        transcribeBtn.GetComponentInChildren<Text>().text = "Transcribe";
         transcribeBtn.interactable = true;
         contentListDD.interactable = true;
         audiosDD.interactable = true;
@@ -152,6 +158,7 @@ public class Transcribe : MonoBehaviour
 
     private async Task Transcribing(AudioClip clip)
     {
+        audioSource.clip = clip;
         transcribeBtn.GetComponentInChildren<Text>().text = "Transcribing..";
         var sw = new Stopwatch();
         sw.Start();
@@ -165,31 +172,64 @@ public class Transcribe : MonoBehaviour
         timeText.text = $"{((float)time / 1000):0.000} seconds";
 
         // start playing sound
-        AudioSource source = FindObjectOfType<AudioSource>();
-        if (source == null) source = new GameObject("Audio Echo").AddComponent<AudioSource>();
-        source.clip = clip;
-        source.Play();
-        playingIcon.gameObject.SetActive(true);
+        //audioSource.Play();
 
-        transcribeBtn.GetComponentInChildren<Text>().text = "Playing audio..";
+        //transcribeBtn.GetComponentInChildren<Text>().text = "Playing audio..";
         subtitleText.text = ResultToRichText(res);
 
         // and show subtitles at the same time
-        while (source.isPlaying)
-        {
-            //var text = GetSubtitles(res, source.time);
-            //subtitleText.text = text;
-            await Task.Yield();
+        //while (audioSource.isPlaying)
+        //{
+        //    //var text = GetSubtitles(res, source.time);
+        //    //subtitleText.text = text;
+        //    await Task.Yield();
 
-            // check that audio source still here and wasn't destroyed
-            if (!source)
-                return;
-        }
-        playingIcon.gameObject.SetActive(false);
+        //    // check that audio source still here and wasn't destroyed
+        //    if (!audioSource)
+        //        return;
+        //}
+        //playingIcon.gameObject.SetActive(false);
 
         timeText.text = "";
         subtitleText.text = "";
         transcribedText.text += AddSpaces(ResultToRichText(res)) + "\n";
+    }
+
+    private void PlayPause()
+    {
+        if (audioSource.clip != null)
+        {
+            if (audioSource.isPlaying)
+            {
+                audioSource.Pause();
+                playingIcon.gameObject.SetActive(false);
+                playPauseBtn.GetComponentInChildren<Text>().text = "Play";
+            }
+            else
+            {
+                StartCoroutine(PlayingAudio());
+            }
+        }
+    }
+
+    private IEnumerator PlayingAudio()
+    {
+        if (audioSource.clip == null)
+            yield break;
+        playingIcon.gameObject.SetActive(true);
+        playPauseBtn.GetComponentInChildren<Text>().text = "Pause";
+        audioSource.Play();
+
+        while (audioSource.isPlaying)
+        {
+            yield return Task.Yield();
+            if (audioSource == null || audioSource.clip == null)
+                yield break;
+        }
+
+        audioSource.Stop();
+        playingIcon.gameObject.SetActive(false);
+        playPauseBtn.GetComponentInChildren<Text>().text = "Play";
     }
 
     // TODO: this isn't optimized and for demo use only
